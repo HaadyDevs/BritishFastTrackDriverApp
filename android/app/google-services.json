@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "911656018156",
+    "project_id": "britishfasttrack-fc657",
+    "storage_bucket": "britishfasttrack-fc657.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:911656018156:android:603322bf43f1748cdf05c9",
+        "android_client_info": {
+          "package_name": "com.britishfasttrackdriverapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADwfrCquIzNnyJhSjCmci4_NhQ68ELczQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

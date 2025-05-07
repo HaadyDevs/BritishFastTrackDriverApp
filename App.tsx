@@ -1,131 +1,167 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, {useEffect} from 'react';
+import {NavigationContainer} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import Icon from 'react-native-vector-icons/FontAwesome5';
+import {Alert, PermissionsAndroid} from 'react-native';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+// Import Screens
+import WelcomeScreen from './src/screens/WelcomeScreen';
+// import LoginScreen from './src/screens/LoginScreen';
+// import SignUpScreen from './src/screens/SignUpScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import AccountScreen from './src/screens/AccountScreen';
+import {colors} from './src/theme/colors';
+import LoginScreen from './src/screens/LoginScreen';
+import RegistrationScreen from './src/screens/RegisterScreen';
+import FlashMessage from 'react-native-flash-message';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import DriverInfoScreen from './src/screens/DriverInfoScreen';
+import OtpVerificationScreen from './src/screens/OTPScreen';
+import AddVehicleDetailScreen from './src/screens/AddVehicleDetailScreeen';
+import {Provider} from 'jotai';
+import messaging from '@react-native-firebase/messaging';
+import {getAuth, signInAnonymously} from '@react-native-firebase/auth';
+import RideInProgressScreen from './src/screens/RideInProgress';
+import WalletScreen from './src/screens/WalletScreen';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+// Create Navigators
+const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+// 🏠 Home Stack (inside Home Tab)
+const HomeStack = () => (
+  <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Screen name="HomeMain" component={HomeScreen} />
+  </Stack.Navigator>
+);
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+// 🚖 Bottom Tab Navigator (Main App after login)
+const MainTabNavigator = () => (
+  <Tab.Navigator
+    screenOptions={({route}) => ({
+      headerShown: false,
+      tabBarIcon: ({color, size}) => {
+        let iconName;
+        if (route.name === 'Home') iconName = 'home';
+        else if (route.name === 'Wallet') iconName = 'coins';
+        else if (route.name === 'Account') iconName = 'user';
+
+        return <Icon name={iconName} size={size} color={color} />;
+      },
+      tabBarStyle: {
+        backgroundColor: '#012169',
+        height: 55,
+      },
+      tabBarActiveTintColor: colors.primary,
+      tabBarInactiveTintColor: colors.secondary,
+    })}>
+    <Tab.Screen name="Home" component={HomeStack} />
+    <Tab.Screen name="Wallet" component={WalletScreen} />
+    <Tab.Screen name="Account" component={AccountScreen} />
+  </Tab.Navigator>
+);
+
+// 📱 Main App Navigator
+const App = () => {
+  useEffect(() => {
+    const requestNotificationPermission = async () => {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          await messaging().registerDeviceForRemoteMessages();
+
+          // Get the token
+          const token = await messaging().getToken();
+          console.log(token);
+        } else {
+          console.log('Notification permission denied');
+        }
+      } catch (err) {
+        console.warn('Permission error:', err);
+      }
+    };
+
+    const signInFirebase = async () => {
+      signInAnonymously(getAuth())
+        .then(() => {
+          console.log('User signed in anonymously');
+        })
+        .catch(error => {
+          if (error.code === 'auth/operation-not-allowed') {
+            console.log('Enable anonymous in your firebase console.');
+          }
+
+          console.error(error);
+        });
+    };
+
+    requestNotificationPermission();
+    signInFirebase()
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+      console.log(remoteMessage);
+
+      Alert.alert('A new FCM message arrived!', JSON.stringify(remoteMessage));
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log('📲 Notification opened app from background:', remoteMessage);
+      // Navigate based on `remoteMessage.data`
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    messaging()
+      .getInitialNotification()
+      .then(remoteMessage => {
+        if (remoteMessage) {
+          console.log(
+            '🧊 App launched from quit by notification:',
+            remoteMessage,
+          );
+          // Navigate or pre-load trip details
+        }
+      });
+  }, []);
+
   return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
+    <Provider>
+      <NavigationContainer>
+        <SafeAreaView style={{flex: 1}}>
+          <Stack.Navigator screenOptions={{headerShown: false}}>
+            {/* AUTH FLOW */}
+            <Stack.Screen name="Welcome" component={WelcomeScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegistrationScreen} />
+            <Stack.Screen name="DriverInfo" component={DriverInfoScreen} />
+            <Stack.Screen
+              name="AddVehicle"
+              component={AddVehicleDetailScreen}
+            />
+            <Stack.Screen name="Otp" component={OtpVerificationScreen} />
+            <Stack.Screen name="RideInProgress" component={RideInProgressScreen} />
+
+            {/* MAIN APP */}
+            <Stack.Screen name="MainApp" component={MainTabNavigator} />
+
+          </Stack.Navigator>
+          <FlashMessage position="bottom" />
+        </SafeAreaView>
+      </NavigationContainer>
+    </Provider>
   );
-}
-
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
-
-  /*
-   * To keep the template simple and small we're adding padding to prevent view
-   * from rendering under the System UI.
-   * For bigger apps the recommendation is to use `react-native-safe-area-context`:
-   * https://github.com/AppAndFlow/react-native-safe-area-context
-   *
-   * You can read more about it here:
-   * https://github.com/react-native-community/discussions-and-proposals/discussions/827
-   */
-  const safePadding = '5%';
-
-  return (
-    <View style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        style={backgroundStyle}>
-        <View style={{paddingRight: safePadding}}>
-          <Header/>
-        </View>
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-            paddingHorizontal: safePadding,
-            paddingBottom: safePadding,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+};
 
 export default App;
